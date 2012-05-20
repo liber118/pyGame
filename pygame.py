@@ -210,6 +210,68 @@ class Player:
         return card
 
 
+    def simulate_jail (self, game, us, them):
+        """
+        model for the minimum number of Fellowship jail staff needed
+        """
+
+        n_reserve = us.calc_reserve()
+
+        if n_reserve > us.meta["n_forces"]:
+            ## DICE: d10/10, >0
+
+            ROLL_AMNESTY = 0.0
+            roll = roll_dice10() / 10.0
+
+            if roll > ROLL_AMNESTY:
+                delta = round(roll * us.meta["n_captive"], 0)
+                us.record_loss(delta, "captive_state", "JAIL AMNESTY!")
+                us.add_captive(game, -delta)
+                them.add_forces(game, delta)
+
+        us.meta["n_reserve"] = min(n_reserve, us.meta["n_forces"])
+        us.meta["n_deploy"] = us.meta["n_forces"] - us.meta["n_reserve"]
+
+
+    def simulate_hospital (self, game, us, them):
+        """
+        model for the minimum number of Founders hospital staff needed
+        """
+
+        n_reserve = us.calc_reserve()
+        them.meta["enraged"] = False
+
+        if n_reserve > us.meta["n_forces"]:
+            ## DICE: d10, >6
+
+            ROLL_RAGE = 6
+            roll = roll_dice10()
+
+            if roll > ROLL_RAGE:
+                us.record_loss(0, "captive_state", "RIOT COP RAGE!")
+                them.meta["enraged"] = True
+
+        us.meta["n_reserve"] = min(n_reserve, us.meta["n_forces"])
+        us.meta["n_deploy"] = us.meta["n_forces"] - us.meta["n_reserve"]
+
+
+    def prevent_draw (self, game, us, them):
+        """
+        ensure that no more than N turns occur without change,
+        otherwise the Status Quo prevails
+        """
+
+        full_meta = str(us.meta) + str(them.meta)
+
+        if len(filter(lambda x: full_meta != x, game.last_full_meta)) == 0:
+            game.game_over(them, "stalemate")
+        else:
+            game.last_full_meta.append(full_meta)
+        
+            if len(game.last_full_meta) > game.outcome["len_stalemate"]:
+                game.last_full_meta = game.last_full_meta[0:game.outcome["len_stalemate"]]
+
+
     def calc_reserve (self):
         """
         calculate the required reserves
@@ -377,26 +439,9 @@ class Game:
             func(self, self.founder, self.fellows)
 
         for func in self.fellows.conditions:
-            func(self, self.founder, self.fellows)
+            func(self, self.fellows, self.founder)
 
         self.outcome["n_turn"] += 1
-
-
-    def prevent_draw (self, game, us, them):
-        """
-        ensure that no more than N turns occur without change,
-        otherwise the Status Quo prevails
-        """
-
-        full_meta = str(self.founder.meta) + str(self.fellows.meta)
-
-        if len(filter(lambda x: full_meta != x, self.last_full_meta)) == 0:
-            self.game_over(self.fellows, "stalemate")
-        else:
-            self.last_full_meta.append(full_meta)
-        
-            if len(self.last_full_meta) > self.outcome["len_stalemate"]:
-                self.last_full_meta = self.last_full_meta[0:self.outcome["len_stalemate"]]
 
 
     def conclude (self):
@@ -436,54 +481,9 @@ class TBOO_Game (Game):
     def __init__ (self, file_conf, sim=None):
         Game.__init__(self, file_conf, sim)
 
-        self.founder.conditions.append(self.simulate_jail)
-        self.fellows.conditions.append(self.simulate_hospital)
-        self.fellows.conditions.append(self.prevent_draw)
-
-
-    def simulate_jail (self, game, us, them):
-        """
-        model for the minimum number of Fellowship jail staff needed
-        """
-
-        n_reserve = self.fellows.calc_reserve()
-
-        if n_reserve > self.fellows.meta["n_forces"]:
-            ## DICE: d10/10, >0
-
-            ROLL_AMNESTY = 0.0
-            roll = roll_dice10() / 10.0
-
-            if roll > ROLL_AMNESTY:
-                delta = round(roll * self.fellows.meta["n_captive"], 0)
-                self.fellows.record_loss(delta, "captive_state", "JAIL AMNESTY!")
-                self.fellows.add_captive(self, -delta)
-                self.founder.add_forces(self, delta)
-
-        self.fellows.meta["n_reserve"] = min(n_reserve, self.fellows.meta["n_forces"])
-        self.fellows.meta["n_deploy"] = self.fellows.meta["n_forces"] - self.fellows.meta["n_reserve"]
-
-
-    def simulate_hospital (self, game, us, them):
-        """
-        model for the minimum number of Founders hospital staff needed
-        """
-
-        n_reserve = self.founder.calc_reserve()
-        self.fellows.meta["enraged"] = False
-
-        if n_reserve > self.founder.meta["n_forces"]:
-            ## DICE: d10, >6
-
-            ROLL_RAGE = 6
-            roll = roll_dice10()
-
-            if roll > ROLL_RAGE:
-                self.founder.record_loss(0, "captive_state", "RIOT COP RAGE!")
-                self.fellows.meta["enraged"] = True
-
-        self.founder.meta["n_reserve"] = min(n_reserve, self.founder.meta["n_forces"])
-        self.founder.meta["n_deploy"] = self.founder.meta["n_forces"] - self.founder.meta["n_reserve"]
+        self.fellows.conditions.append(self.fellows.simulate_jail)
+        self.founder.conditions.append(self.founder.simulate_hospital)
+        self.founder.conditions.append(self.founder.prevent_draw)
 
 
 class Simulation:
