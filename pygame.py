@@ -8,17 +8,6 @@ import uuid
 
 
 ######################################################################
-## game parameters
-
-MAX_TURNS = 100
-LEN_STALEMATE = 3
-
-INIT_FORCE = 100.0
-MIN_RESERVE = 2.0
-RESERVE_RATIO = 0.05
-
-
-######################################################################
 ## global variables and utility methods
       
 debug = True # False
@@ -46,8 +35,8 @@ class Card:
     representation for a generic card in the deck
     """
 
-    def __init__ (self, name, replace=False):
-        self.name = name
+    def __init__ (self, event, replace=False):
+        self.name = event
         self.replace = replace
 
 
@@ -61,8 +50,8 @@ class ForceReductionCard (Card):
     representation for a 'force reduction' card in the deck
     """
 
-    def __init__ (self, name, replace=False):
-        Card.__init__(self, name, replace)
+    def __init__ (self, event, replace=False):
+        Card.__init__(self, event, replace)
 
 
     def execute (self, game, us, them):
@@ -93,8 +82,8 @@ class InsurrectionCard (Card):
     representation for an 'insurrection' card in the deck
     """
 
-    def __init__ (self, name, replace=False):
-        Card.__init__(self, name, replace)
+    def __init__ (self, event, replace=False):
+        Card.__init__(self, event, replace)
 
 
     def execute (self, game, us, them):
@@ -119,8 +108,8 @@ class ConversionCard (Card):
     representation for a 'conversion' card in the deck
     """
 
-    def __init__ (self, name, replace=False):
-        Card.__init__(self, name, replace)
+    def __init__ (self, event, replace=False):
+        Card.__init__(self, event, replace)
 
 
     def execute (self, game, us, them):
@@ -142,8 +131,8 @@ class SeriouslyWeirdCard (Card):
     representation for a 'seriously weird' card in the deck
     """
 
-    def __init__ (self, name, replace=False):
-        Card.__init__(self, name, replace)
+    def __init__ (self, event, replace=False):
+        Card.__init__(self, event, replace)
 
 
     def execute (self, game, us, them):
@@ -164,40 +153,41 @@ class Player:
     representation for a player in the game
     """
 
-    def __init__ (self, name, init_force, forces_name, captive_name):
+    def __init__ (self, meta):
         """
         initialize
         """
 
-        self.name = name
-        self.meta = {}
-        self.deck = []
+        self.meta = meta
+        self.name = self.meta["name"]
         self.opponent = None
 
-        self.meta["init_force"] = init_force
-        self.meta["n_forces"] = init_force
-        self.meta["n_deploy"] = init_force
+        self.meta["n_forces"] = self.meta["init_force"]
+        self.meta["n_deploy"] = self.meta["init_force"]
         self.meta["n_captive"] = 0
         self.meta["n_reserve"] = 0
         self.meta["n_casualty"] = 0
 
         self.meta["enraged"] = False
         self.meta["has_comm"] = True
-        self.meta["forces_name"] = forces_name
-        self.meta["captive_name"] = captive_name
+
+        self.meta["log"] = []
+
+        # populate cards in the deck
+
+        self.deck = []
+
+        for card_conf in self.meta["cards"]:
+            card = eval("".join([card_conf["kind"], '("', card_conf["event"], '")']))
+
+            for i in range(0, card_conf["num"]):
+                self.deck.append(card)
+
+        del self.meta["cards"]
 
 
     def set_opponent (self, opponent):
         self.opponent = opponent
-
-
-    def add_card (self, card, num):
-        """
-        add cards to the deck
-        """
-
-        for i in range(0, num):
-            self.deck.append(card)
 
 
     def has_play (self):
@@ -225,6 +215,9 @@ class Player:
         """
         calculate the required reserves
         """
+
+        MIN_RESERVE = 2.0
+        RESERVE_RATIO = 0.05
 
         return round(max(MIN_RESERVE, self.meta["n_captive"] * RESERVE_RATIO), 0)
 
@@ -268,33 +261,7 @@ class Player:
         record a loss in terms of impact on a given population, due to a specified action
         """
 
-        self.meta["loss"].append([int(delta), self.meta[population], action])
-
-
-class Founder (Player):
-    """
-    representation for the player on the Founders side
-    """
-
-    def __init__ (self):
-        Player.__init__(self, "Founder", INIT_FORCE, "Occupy", "Hospitalized")
-
-        self.add_card(ForceReductionCard("wounded in Friendly-Fire"), 10)
-        self.add_card(ConversionCard("converted by Temple Prostitutes"), 2)
-        self.add_card(InsurrectionCard("overcrowding leads to Jail Break"), 1)
-        self.add_card(SeriouslyWeirdCard("bear the wrath of the Flying Spaghetti Monster"), 1)
-
-
-class Fellows (Player):
-    """
-    representation for the player on the Fellowship side
-    """
-
-    def __init__ (self):
-        Player.__init__(self, "Fellows", INIT_FORCE, "Police", "Incarcerated")
-
-        self.add_card(ForceReductionCard("arrested for Domestic Terrorism"), 10)
-        self.add_card(SeriouslyWeirdCard("witness the Resurrection of Ronald Reagan"), 1)
+        self.meta["log"][-1].append([int(delta), self.meta[population], action])
 
 
 class GameIterator:
@@ -310,7 +277,7 @@ class GameIterator:
         initialize a game iterator, based on the UUID
         """
 
-        self.uuid = game.uuid
+        self.uuid = game.outcome["uuid"]
         self.game_dict[self.uuid] = game
 
 
@@ -335,22 +302,29 @@ class Game:
     representation for the game state
     """
 
-    def __init__ (self, name, sim=None):
+    def __init__ (self, file_conf, sim=None):
         """
         initialize a game with two players and run until end
         """
 
-        self.name = name
-        self.uuid = str(uuid.uuid1())
-        self.iterator = GameIterator(self)
-        self.conditions = []
-        self.outcome = { "game_over": False, "n_turn": 1, "uuid": self.uuid, "name": self.name }
+        with open(file_conf, "r") as f:
+            self.outcome = json.load(f)
 
-        self.founder = Founder()
-        self.fellows = Fellows()
+        self.outcome["n_turn"] = 1
+        self.outcome["game_over"] = False
+
+        self.outcome["uuid"] = str(uuid.uuid1())
+        self.iterator = GameIterator(self)
+
+        self.conditions = []
+        self.founder = Player(self.outcome["player0"])
+        self.fellows = Player(self.outcome["player1"])
 
         self.founder.set_opponent(self.fellows)
         self.fellows.set_opponent(self.founder)
+
+        del self.outcome["player0"]
+        del self.outcome["player1"]
 
         self.sim = sim
         self.last_full_meta = ["0", "0"]
@@ -368,7 +342,7 @@ class Game:
         try:
             if self.outcome["game_over"]:
                 raise StopIteration
-            elif (self.outcome["n_turn"] <= MAX_TURNS):
+            elif (self.outcome["n_turn"] <= self.outcome["max_turns"]):
                 self.attempt_turn()
             else:
                 self.conclude()
@@ -388,8 +362,8 @@ class Game:
         advance the game play for one turn
         """
 
-        self.founder.meta["loss"] = []
-        self.fellows.meta["loss"] = []
+        self.founder.meta["log"].append([])
+        self.fellows.meta["log"].append([])
 
         ## advance to next turn
 
@@ -419,8 +393,8 @@ class Game:
         else:
             self.last_full_meta.append(full_meta)
         
-            if len(self.last_full_meta) > LEN_STALEMATE:
-                self.last_full_meta = self.last_full_meta[0:LEN_STALEMATE]
+            if len(self.last_full_meta) > self.outcome["len_stalemate"]:
+                self.last_full_meta = self.last_full_meta[0:self.outcome["len_stalemate"]]
 
 
     def conclude (self):
@@ -428,7 +402,7 @@ class Game:
         no cards left; force a terminating condition
         """
 
-        if self.outcome["n_turn"] >= MAX_TURNS:
+        if self.outcome["n_turn"] >= self.outcome["max_turns"]:
             self.game_over(self.fellows, "status quo")
         elif self.founder.meta["n_forces"] > self.fellows.meta["n_forces"]:
             self.game_over(self.founder, "both ran out of cards")
@@ -457,8 +431,8 @@ class TBOO_Game (Game):
     representation for the Battle of Oakland game 
     """
 
-    def __init__ (self, sim=None):
-        Game.__init__(self, "The Battle Of Oakland", sim)
+    def __init__ (self, file_conf, sim=None):
+        Game.__init__(self, file_conf, sim)
 
         self.conditions.append(self.simulate_jail)
         self.conditions.append(self.simulate_hospital)
@@ -480,7 +454,7 @@ class TBOO_Game (Game):
 
             if roll > ROLL_AMNESTY:
                 delta = round(roll * self.fellows.meta["n_captive"], 0)
-                self.fellows.record_loss(delta, "captive_name", "JAIL AMNESTY!")
+                self.fellows.record_loss(delta, "captive_state", "JAIL AMNESTY!")
                 self.fellows.add_captive(self, -delta)
                 self.founder.add_forces(self, delta)
 
@@ -503,7 +477,7 @@ class TBOO_Game (Game):
             roll = roll_dice10()
 
             if roll > ROLL_RAGE:
-                self.founder.record_loss(0, "captive_name", "RIOT COP RAGE!")
+                self.founder.record_loss(0, "captive_state", "RIOT COP RAGE!")
                 self.fellows.meta["enraged"] = True
 
         self.founder.meta["n_reserve"] = min(n_reserve, self.founder.meta["n_forces"])
@@ -515,7 +489,8 @@ class Simulation:
     representation for the game simulation
     """
 
-    def __init__ (self, max_iterations=20):
+    def __init__ (self, file_conf, max_iterations=20):
+        self.file_conf = file_conf
         self.max_iterations = max_iterations
         self.win_tally = { "Founder": 0, "Fellows": 0 }
 
@@ -526,7 +501,7 @@ class Simulation:
         """
         
         for i in range(0, self.max_iterations):
-            for outcome in TBOO_Game(sim):
+            for outcome in TBOO_Game(file_conf, sim):
                 if debug:
                     print json.dumps(outcome)
 
@@ -551,6 +526,8 @@ class Simulation:
 ## command line interface
 
 if __name__ == "__main__":
-    sim = Simulation()
+    file_conf = sys.argv[1]
+    sim = Simulation(file_conf)
+
     sim.simulate()
     sim.report()

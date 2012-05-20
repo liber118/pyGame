@@ -1,0 +1,31 @@
+{
+  "episode": "The Battle Of Oakland",
+  "max_turns": 100,
+  "len_stalemate": 3,
+
+  "player0": {
+    "name": "Founder",
+    "init_force": 100,
+    "forces_name": "Occupy",
+    "captive_state": "Hospitalized",
+
+    "cards": [
+      { "kind": "ForceReductionCard", "event": "wounded in Friendly-Fire", "num": 10 },
+      { "kind": "ConversionCard", "event": "converted by Temple Prostitutes", "num": 2 },
+      { "kind": "InsurrectionCard", "event": "overcrowding leads to Jail Break", "num": 1 },
+      { "kind": "SeriouslyWeirdCard", "event": "bear the wrath of the Flying Spaghetti Monster", "num": 1 }
+    ]
+  },
+
+  "player1": {
+    "name": "Fellows",
+    "init_force": 100,
+    "forces_name": "Police",
+    "captive_state": "Incarcerated",
+
+    "cards": [
+      { "kind": "ForceReductionCard", "event": "arrested for Domestic Terrorism", "num": 10 },
+      { "kind": "SeriouslyWeirdCard", "event": "witness the Resurrection of Ronald Reagan", "num": 1 }
+    ]
+  }
+}
