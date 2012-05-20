@@ -4,7 +4,7 @@
   "len_stalemate": 3,
 
   "player0": {
-    "name": "Founder",
+    "side": "Founders",
     "init_force": 100,
     "forces_name": "Occupy",
     "captive_state": "Hospitalized",
@@ -18,7 +18,7 @@
   },
 
   "player1": {
-    "name": "Fellows",
+    "side": "The Fellowship",
     "init_force": 100,
     "forces_name": "Police",
     "captive_state": "Incarcerated",

@@ -36,7 +36,7 @@ class Card:
     """
 
     def __init__ (self, event, replace=False):
-        self.name = event
+        self.event = event
         self.replace = replace
 
 
@@ -66,13 +66,13 @@ class ForceReductionCard (Card):
             casualty = round(roll / REDUCE_FACTOR * delta, 0)
 
             if debug:
-                print them.name, ":", "CASUALTY", casualty
+                print them.meta["side"], ":", "CASUALTY", casualty
 
             delta -= casualty
             them.record_loss(casualty, "forces_name", "casualties")
             them.meta["n_casualty"] += casualty
 
-        them.record_loss(delta, "forces_name", self.name)
+        them.record_loss(delta, "forces_name", self.event)
         us.add_captive(game, delta)
         them.add_forces(game, -delta)
 
@@ -98,7 +98,7 @@ class InsurrectionCard (Card):
         INSURRECT_FACTOR = 10.0
 
         if delta > (them.meta["init_force"] / INSURRECT_FACTOR):
-            them.record_loss(delta, "forces_name", self.name)
+            them.record_loss(delta, "forces_name", self.event)
             them.add_captive(game, -delta)
             us.add_forces(game, delta)
 
@@ -121,7 +121,7 @@ class ConversionCard (Card):
         if roll > ROLL_CONVERT:
             delta = round(roll * them.meta["n_forces"], 0)
 
-            them.record_loss(delta, "forces_name", self.name)
+            them.record_loss(delta, "forces_name", self.event)
             them.add_forces(game, -delta)
             us.add_forces(game, delta)
 
@@ -144,7 +144,7 @@ class SeriouslyWeirdCard (Card):
 
         if roll > ROLL_WEIRD:
             delta = round(roll * them.meta["n_forces"], 0)
-            them.record_loss(delta, "forces_name", self.name)
+            them.record_loss(delta, "forces_name", self.event)
             them.add_forces(game, -delta)
 
 
@@ -159,8 +159,9 @@ class Player:
         """
 
         self.meta = meta
-        self.name = self.meta["name"]
         self.opponent = None
+        self.meta["log"] = []
+        self.conditions = []
 
         self.meta["n_forces"] = self.meta["init_force"]
         self.meta["n_deploy"] = self.meta["init_force"]
@@ -170,8 +171,6 @@ class Player:
 
         self.meta["enraged"] = False
         self.meta["has_comm"] = True
-
-        self.meta["log"] = []
 
         # populate cards in the deck
 
@@ -233,7 +232,7 @@ class Player:
                 self.meta["n_forces"] += delta;
 
             if not (self.meta["n_forces"] >= 0):
-                raise AssertionError("negative forces size: " + self.name + str(self.meta))
+                raise AssertionError("negative forces size: " + self.meta["side"] + str(self.meta))
 
 
     def add_captive (self, game, delta):
@@ -244,7 +243,7 @@ class Player:
             self.meta["n_captive"] += delta;
 
             if not (self.meta["n_captive"] >= 0):
-                raise AssertionError("negative captive size: " + self.name + str(self.meta))
+                raise AssertionError("negative captive size: " + self.meta["side"] + str(self.meta))
 
 
     def execute (self, game):
@@ -316,7 +315,6 @@ class Game:
         self.outcome["uuid"] = str(uuid.uuid1())
         self.iterator = GameIterator(self)
 
-        self.conditions = []
         self.founder = Player(self.outcome["player0"])
         self.fellows = Player(self.outcome["player1"])
 
@@ -351,8 +349,8 @@ class Game:
             self.outcome["end"] = ex.value
             self.outcome["game_over"] = True
 
-        self.outcome[self.founder.name] = self.founder.meta
-        self.outcome[self.fellows.name] = self.fellows.meta
+        self.outcome[self.founder.meta["side"]] = self.founder.meta
+        self.outcome[self.fellows.meta["side"]] = self.fellows.meta
 
         return self.outcome
 
@@ -375,15 +373,19 @@ class Game:
 
         ## test for the end conditions
 
-        for func in self.conditions:
-            func()
+        for func in self.founder.conditions:
+            func(self, self.founder, self.fellows)
+
+        for func in self.fellows.conditions:
+            func(self, self.founder, self.fellows)
 
         self.outcome["n_turn"] += 1
 
 
-    def prevent_draw (self):
+    def prevent_draw (self, game, us, them):
         """
-        ensure no more than N turns without change before Status Quo prevails
+        ensure that no more than N turns occur without change,
+        otherwise the Status Quo prevails
         """
 
         full_meta = str(self.founder.meta) + str(self.fellows.meta)
@@ -417,11 +419,11 @@ class Game:
         winning condition terminates game
         """
 
-        self.sim.tally(winner)
+        self.sim.tally(self.founder == winner)
 
         loser = winner.opponent
         margin = winner.meta["n_forces"] - loser.meta["n_forces"]
-        stats = { "condition": condition, "winner": winner.name, "margin": int(margin) }
+        stats = { "condition": condition, "winner": winner.meta["side"], "margin": int(margin) }
 
         raise GameOverException(stats)
 
@@ -434,12 +436,12 @@ class TBOO_Game (Game):
     def __init__ (self, file_conf, sim=None):
         Game.__init__(self, file_conf, sim)
 
-        self.conditions.append(self.simulate_jail)
-        self.conditions.append(self.simulate_hospital)
-        self.conditions.append(self.prevent_draw)
+        self.founder.conditions.append(self.simulate_jail)
+        self.fellows.conditions.append(self.simulate_hospital)
+        self.fellows.conditions.append(self.prevent_draw)
 
 
-    def simulate_jail (self):
+    def simulate_jail (self, game, us, them):
         """
         model for the minimum number of Fellowship jail staff needed
         """
@@ -462,7 +464,7 @@ class TBOO_Game (Game):
         self.fellows.meta["n_deploy"] = self.fellows.meta["n_forces"] - self.fellows.meta["n_reserve"]
 
 
-    def simulate_hospital (self):
+    def simulate_hospital (self, game, us, them):
         """
         model for the minimum number of Founders hospital staff needed
         """
@@ -492,7 +494,7 @@ class Simulation:
     def __init__ (self, file_conf, max_iterations=20):
         self.file_conf = file_conf
         self.max_iterations = max_iterations
-        self.win_tally = { "Founder": 0, "Fellows": 0 }
+        self.win_tally = { "0": 0, "1": 0 }
 
 
     def simulate (self):
@@ -506,12 +508,15 @@ class Simulation:
                     print json.dumps(outcome)
 
 
-    def tally (self, winner):
+    def tally (self, player0_wins):
         """
         tally counts for winning players
         """
 
-        self.win_tally[winner.name] += 1
+        if player0_wins:
+            self.win_tally["0"] += 1
+        else:
+            self.win_tally["1"] += 1
 
 
     def report (self):
@@ -519,7 +524,7 @@ class Simulation:
         report summary statistics for the simulation
         """
 
-        print self.win_tally["Founder"] / float(self.max_iterations)
+        print self.win_tally["0"] / float(self.max_iterations)
 
 
 ######################################################################
