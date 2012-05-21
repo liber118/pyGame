@@ -48,6 +48,7 @@ class PreventDraw (Condition):
     def __init__(self):
         pass
 
+
     def execute (self, game, us, them):
         """
         ensure that no more than N turns occur without change,
@@ -69,6 +70,7 @@ class SimulateJail (Condition):
     def __init__(self):
         pass
 
+
     def execute (self, game, us, them):
         """
         model for the minimum number of Fellowship jail staff needed
@@ -84,7 +86,7 @@ class SimulateJail (Condition):
 
             if roll > ROLL_AMNESTY:
                 delta = round(roll * us.meta["n_captive"], 0)
-                us.record_loss(delta, "captive_state", "JAIL AMNESTY!")
+                us.log_event(delta, "captive_state", "JAIL AMNESTY!")
                 us.add_captive(game, -delta)
                 them.add_forces(game, delta)
 
@@ -95,6 +97,7 @@ class SimulateJail (Condition):
 class SimulateHospital (Condition):
     def __init__(self):
         pass
+
 
     def execute (self, game, us, them):
         """
@@ -111,7 +114,7 @@ class SimulateHospital (Condition):
             roll = roll_dice10()
 
             if roll > ROLL_RAGE:
-                us.record_loss(0, "captive_state", "RIOT COP RAGE!")
+                us.log_event(0, "captive_state", "RIOT COP RAGE!")
                 them.meta["enraged"] = True
 
         us.meta["n_reserve"] = min(n_reserve, us.meta["n_forces"])
@@ -152,10 +155,10 @@ class ForceReductionCard (Card):
                 print them.meta["side"], ":", "CASUALTY", casualty
 
             delta -= casualty
-            them.record_loss(casualty, "forces_name", "casualties")
+            them.log_event(casualty, "forces_name", "casualties")
             them.meta["n_casualty"] += casualty
 
-        them.record_loss(delta, "forces_name", self.event)
+        them.log_event(delta, "forces_name", self.event)
         us.add_captive(game, delta)
         them.add_forces(game, -delta)
 
@@ -181,7 +184,7 @@ class InsurrectionCard (Card):
         INSURRECT_FACTOR = 10.0
 
         if delta > (them.meta["init_force"] / INSURRECT_FACTOR):
-            them.record_loss(delta, "forces_name", self.event)
+            them.log_event(delta, "forces_name", self.event)
             them.add_captive(game, -delta)
             us.add_forces(game, delta)
 
@@ -204,7 +207,7 @@ class ConversionCard (Card):
         if roll > ROLL_CONVERT:
             delta = round(roll * them.meta["n_forces"], 0)
 
-            them.record_loss(delta, "forces_name", self.event)
+            them.log_event(delta, "forces_name", self.event)
             them.add_forces(game, -delta)
             us.add_forces(game, delta)
 
@@ -227,7 +230,7 @@ class SeriouslyWeirdCard (Card):
 
         if roll > ROLL_WEIRD:
             delta = round(roll * them.meta["n_forces"], 0)
-            them.record_loss(delta, "forces_name", self.event)
+            them.log_event(delta, "forces_name", self.event)
             them.add_forces(game, -delta)
 
 
@@ -244,7 +247,6 @@ class Player:
         self.meta = meta
         self.opponent = None
         self.meta["log"] = []
-        self.conditions = []
 
         self.meta["n_forces"] = self.meta["init_force"]
         self.meta["n_deploy"] = self.meta["init_force"]
@@ -254,6 +256,16 @@ class Player:
 
         self.meta["enraged"] = False
         self.meta["has_comm"] = True
+
+        # populate conditions in the simulation
+
+        self.conditions = []
+
+        for cond_conf in self.meta["conditions"]:
+            condition = eval("".join([cond_conf["kind"], '()']))
+            self.conditions.append(condition)
+
+        del self.meta["conditions"]
 
         # populate cards in the deck
 
@@ -338,12 +350,12 @@ class Player:
         card.execute(game, self, self.opponent)
 
 
-    def record_loss (self, delta, population, action):
+    def log_event (self, delta, population, event):
         """
-        record a loss in terms of impact on a given population, due to a specified action
+        record a loss in terms of impact on a given population, due to a specified event
         """
 
-        self.meta["log"][-1].append([int(delta), self.meta[population], action])
+        self.meta["log"][-1].append([int(delta), self.meta[population], event])
 
 
 class GameIterator:
@@ -494,19 +506,6 @@ class Game:
         raise GameOverException(stats)
 
 
-class TBOO_Game (Game):
-    """
-    representation for the Battle of Oakland game 
-    """
-
-    def __init__ (self, file_conf, sim=None):
-        Game.__init__(self, file_conf, sim)
-
-        self.fellows.conditions.append(SimulateJail())
-        self.founder.conditions.append(SimulateHospital())
-        self.founder.conditions.append(PreventDraw())
-
-
 class Simulation:
     """
     representation for the game simulation
@@ -524,7 +523,7 @@ class Simulation:
         """
         
         for i in range(0, self.max_iterations):
-            for outcome in TBOO_Game(file_conf, sim):
+            for outcome in Game(file_conf, sim):
                 if debug:
                     print json.dumps(outcome)
 

@@ -9,6 +9,11 @@
     "forces_name": "Occupy",
     "captive_state": "Hospitalized",
 
+    "conditions": [
+      { "kind": "SimulateHospital" },
+      { "kind": "PreventDraw" }
+    ],
+
     "cards": [
       { "kind": "ForceReductionCard", "event": "wounded in Friendly-Fire", "num": 10 },
       { "kind": "ConversionCard", "event": "converted by Temple Prostitutes", "num": 2 },
@@ -22,6 +27,10 @@
     "init_force": 100,
     "forces_name": "Police",
     "captive_state": "Incarcerated",
+
+    "conditions": [
+      { "kind": "SimulateJail" }
+    ],
 
     "cards": [
       { "kind": "ForceReductionCard", "event": "arrested for Domestic Terrorism", "num": 10 },
