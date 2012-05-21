@@ -30,7 +30,95 @@ class GameOverException (Exception):
         return repr(self.value)
 
 
-class Card:
+class Condition:
+    """
+    representation for a condition to test in the simulation
+    """
+
+    def __init__ (self):
+        pass
+
+
+    def execute (self, game, us, them):
+        if debug:
+            print "nop"
+
+
+class PreventDraw (Condition):
+    def __init__(self):
+        pass
+
+    def execute (self, game, us, them):
+        """
+        ensure that no more than N turns occur without change,
+        otherwise the Status Quo prevails
+        """
+
+        full_meta = str(us.meta) + str(them.meta)
+
+        if len(filter(lambda x: full_meta != x, game.last_full_meta)) == 0:
+            game.game_over(them, "stalemate")
+        else:
+            game.last_full_meta.append(full_meta)
+        
+            if len(game.last_full_meta) > game.outcome["len_stalemate"]:
+                game.last_full_meta = game.last_full_meta[0:game.outcome["len_stalemate"]]
+
+
+class SimulateJail (Condition):
+    def __init__(self):
+        pass
+
+    def execute (self, game, us, them):
+        """
+        model for the minimum number of Fellowship jail staff needed
+        """
+
+        n_reserve = us.calc_reserve()
+
+        if n_reserve > us.meta["n_forces"]:
+            ## DICE: d10/10, >0
+
+            ROLL_AMNESTY = 0.0
+            roll = roll_dice10() / 10.0
+
+            if roll > ROLL_AMNESTY:
+                delta = round(roll * us.meta["n_captive"], 0)
+                us.record_loss(delta, "captive_state", "JAIL AMNESTY!")
+                us.add_captive(game, -delta)
+                them.add_forces(game, delta)
+
+        us.meta["n_reserve"] = min(n_reserve, us.meta["n_forces"])
+        us.meta["n_deploy"] = us.meta["n_forces"] - us.meta["n_reserve"]
+
+
+class SimulateHospital (Condition):
+    def __init__(self):
+        pass
+
+    def execute (self, game, us, them):
+        """
+        model for the minimum number of Founders hospital staff needed
+        """
+
+        n_reserve = us.calc_reserve()
+        them.meta["enraged"] = False
+
+        if n_reserve > us.meta["n_forces"]:
+            ## DICE: d10, >6
+
+            ROLL_RAGE = 6
+            roll = roll_dice10()
+
+            if roll > ROLL_RAGE:
+                us.record_loss(0, "captive_state", "RIOT COP RAGE!")
+                them.meta["enraged"] = True
+
+        us.meta["n_reserve"] = min(n_reserve, us.meta["n_forces"])
+        us.meta["n_deploy"] = us.meta["n_forces"] - us.meta["n_reserve"]
+
+
+class Card (Condition):
     """
     representation for a generic card in the deck
     """
@@ -38,11 +126,6 @@ class Card:
     def __init__ (self, event, replace=False):
         self.event = event
         self.replace = replace
-
-
-    def execute (self, game, us, them):
-        if debug:
-            print "nop"
 
 
 class ForceReductionCard (Card):
@@ -210,68 +293,6 @@ class Player:
         return card
 
 
-    def simulate_jail (self, game, us, them):
-        """
-        model for the minimum number of Fellowship jail staff needed
-        """
-
-        n_reserve = us.calc_reserve()
-
-        if n_reserve > us.meta["n_forces"]:
-            ## DICE: d10/10, >0
-
-            ROLL_AMNESTY = 0.0
-            roll = roll_dice10() / 10.0
-
-            if roll > ROLL_AMNESTY:
-                delta = round(roll * us.meta["n_captive"], 0)
-                us.record_loss(delta, "captive_state", "JAIL AMNESTY!")
-                us.add_captive(game, -delta)
-                them.add_forces(game, delta)
-
-        us.meta["n_reserve"] = min(n_reserve, us.meta["n_forces"])
-        us.meta["n_deploy"] = us.meta["n_forces"] - us.meta["n_reserve"]
-
-
-    def simulate_hospital (self, game, us, them):
-        """
-        model for the minimum number of Founders hospital staff needed
-        """
-
-        n_reserve = us.calc_reserve()
-        them.meta["enraged"] = False
-
-        if n_reserve > us.meta["n_forces"]:
-            ## DICE: d10, >6
-
-            ROLL_RAGE = 6
-            roll = roll_dice10()
-
-            if roll > ROLL_RAGE:
-                us.record_loss(0, "captive_state", "RIOT COP RAGE!")
-                them.meta["enraged"] = True
-
-        us.meta["n_reserve"] = min(n_reserve, us.meta["n_forces"])
-        us.meta["n_deploy"] = us.meta["n_forces"] - us.meta["n_reserve"]
-
-
-    def prevent_draw (self, game, us, them):
-        """
-        ensure that no more than N turns occur without change,
-        otherwise the Status Quo prevails
-        """
-
-        full_meta = str(us.meta) + str(them.meta)
-
-        if len(filter(lambda x: full_meta != x, game.last_full_meta)) == 0:
-            game.game_over(them, "stalemate")
-        else:
-            game.last_full_meta.append(full_meta)
-        
-            if len(game.last_full_meta) > game.outcome["len_stalemate"]:
-                game.last_full_meta = game.last_full_meta[0:game.outcome["len_stalemate"]]
-
-
     def calc_reserve (self):
         """
         calculate the required reserves
@@ -435,11 +456,11 @@ class Game:
 
         ## test for the end conditions
 
-        for func in self.founder.conditions:
-            func(self, self.founder, self.fellows)
+        for cond in self.fellows.conditions:
+            cond.execute(self, self.fellows, self.founder)
 
-        for func in self.fellows.conditions:
-            func(self, self.fellows, self.founder)
+        for cond in self.founder.conditions:
+            cond.execute(self, self.founder, self.fellows)
 
         self.outcome["n_turn"] += 1
 
@@ -481,9 +502,9 @@ class TBOO_Game (Game):
     def __init__ (self, file_conf, sim=None):
         Game.__init__(self, file_conf, sim)
 
-        self.fellows.conditions.append(self.fellows.simulate_jail)
-        self.founder.conditions.append(self.founder.simulate_hospital)
-        self.founder.conditions.append(self.founder.prevent_draw)
+        self.fellows.conditions.append(SimulateJail())
+        self.founder.conditions.append(SimulateHospital())
+        self.founder.conditions.append(PreventDraw())
 
 
 class Simulation:
