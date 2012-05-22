@@ -126,9 +126,9 @@ class Card (Condition):
     representation for a generic card in the deck
     """
 
-    def __init__ (self, event, replace=False):
+    def __init__ (self, event, retry=False):
         self.event = event
-        self.replace = replace
+        self.retry = retry
 
 
 class ForceReductionCard (Card):
@@ -136,8 +136,8 @@ class ForceReductionCard (Card):
     representation for a 'force reduction' card in the deck
     """
 
-    def __init__ (self, event, replace=False):
-        Card.__init__(self, event, replace)
+    def __init__ (self, event, retry=False):
+        Card.__init__(self, event, retry)
 
 
     def execute (self, game, us, them):
@@ -168,8 +168,8 @@ class InsurrectionCard (Card):
     representation for an 'insurrection' card in the deck
     """
 
-    def __init__ (self, event, replace=False):
-        Card.__init__(self, event, replace)
+    def __init__ (self, event, retry=False):
+        Card.__init__(self, event, retry)
 
 
     def execute (self, game, us, them):
@@ -194,8 +194,8 @@ class ConversionCard (Card):
     representation for a 'conversion' card in the deck
     """
 
-    def __init__ (self, event, replace=False):
-        Card.__init__(self, event, replace)
+    def __init__ (self, event, retry=False):
+        Card.__init__(self, event, retry)
 
 
     def execute (self, game, us, them):
@@ -217,8 +217,8 @@ class SeriouslyWeirdCard (Card):
     representation for a 'seriously weird' card in the deck
     """
 
-    def __init__ (self, event, replace=False):
-        Card.__init__(self, event, replace)
+    def __init__ (self, event, retry=False):
+        Card.__init__(self, event, retry)
 
 
     def execute (self, game, us, them):
@@ -272,7 +272,7 @@ class Player:
         self.deck = []
 
         for card_conf in self.meta["cards"]:
-            card = eval("".join([card_conf["kind"], '("', card_conf["event"], '")']))
+            card = eval("".join([card_conf["kind"], '("', card_conf["event"], '",', card_conf["retry"], ')']))
 
             for i in range(0, card_conf["num"]):
                 self.deck.append(card)
@@ -299,7 +299,7 @@ class Player:
 
         card = random.choice(self.deck)
 
-        if not card.replace:
+        if not card.retry:
             self.deck.remove(card)
 
         return card

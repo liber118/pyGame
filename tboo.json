@@ -15,10 +15,10 @@
     ],
 
     "cards": [
-      { "kind": "ForceReductionCard", "event": "wounded in Friendly-Fire", "num": 10 },
-      { "kind": "ConversionCard", "event": "converted by Temple Prostitutes", "num": 2 },
-      { "kind": "InsurrectionCard", "event": "overcrowding leads to Jail Break", "num": 1 },
-      { "kind": "SeriouslyWeirdCard", "event": "bear the wrath of the Flying Spaghetti Monster", "num": 1 }
+      { "kind": "ForceReductionCard", "event": "wounded in Friendly-Fire", "num": 10, "retry": "False" },
+      { "kind": "ConversionCard", "event": "converted by Temple Prostitutes", "num": 2, "retry": "False" },
+      { "kind": "InsurrectionCard", "event": "overcrowding leads to Jail Break", "num": 1, "retry": "False" },
+      { "kind": "SeriouslyWeirdCard", "event": "bear the wrath of the Flying Spaghetti Monster", "num": 1, "retry": "False" }
     ]
   },
 
@@ -33,8 +33,8 @@
     ],
 
     "cards": [
-      { "kind": "ForceReductionCard", "event": "arrested for Domestic Terrorism", "num": 10 },
-      { "kind": "SeriouslyWeirdCard", "event": "witness the Resurrection of Ronald Reagan", "num": 1 }
+      { "kind": "ForceReductionCard", "event": "arrested for Domestic Terrorism", "num": 10, "retry": "False" },
+      { "kind": "SeriouslyWeirdCard", "event": "witness the Resurrection of Ronald Reagan", "num": 1, "retry": "False" }
     ]
   }
 }
