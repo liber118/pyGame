@@ -2,11 +2,13 @@ Multitool - Command Line Reference
 ==================================
     multitool [param] [param] ...
 
+First tap must be a <code>source</code> and last tap must be a <code>sink</code>
+
 <table>
 <tr><th>options:</th></tr>
 <tr><td><code>-h|--help</code></td><td>show this help text</td></tr>
 <tr><td><code>--markdown</code></td><td>generate help text as GitHub Flavored Markdown</td></tr>
-<tr><td><code>--dot=<file></code></td><td>filename to write a plan DOT file then exit</td></tr>
+<tr><td><code>--dot=filename</code></td><td>write a plan DOT file, then exit</td></tr>
 <tr><th>taps:</th></tr>
 <tr><td><code>source</code></td><td>an url to input data</td></tr>
 <tr><td><code>source.name</code></td><td>name of this source, required if more than one</td></tr>
