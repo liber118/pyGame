@@ -3,7 +3,7 @@ multitool [param] [param] ...
 Usage:
 <table>
 <tr><th>options:</th></tr>
-<tr><td>-h|--help</td><td>show this help text</td></tr>
+<tr><td>`-h|--help`</td><td>show this help text</td></tr>
 <tr><td>--markdown</td><td>generate help text as GitHub Flavored Markdown</td></tr>
 <tr><td>--dot=<file></td><td>filename to write a plan DOT file then exit</td></tr>
 <tr><th>taps:</th></tr>
