@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+# by Liber 118
+# http://liber118.com/
+# licensed under a Creative Commons Attribution-ShareAlike 3.0 Unported License
+# http://creativecommons.org/licenses/by-sa/3.0/
+
+
 import json
 import random
 import sys
