@@ -10,15 +10,15 @@
     "captive_state": "Hospitalized",
 
     "conditions": [
-      { "kind": "SimulateHospital", "dice": "d10" },
-      { "kind": "PreventDraw", "dice": "" }
+      { "kind": "SimulateHospital", "dice": "d10, >6" },
+      { "kind": "PreventDraw", "dice": "d10, >0" }
     ],
 
     "cards": [
-      { "kind": "ForceReductionCard", "event": "wounded in Friendly-Fire", "num": 10, "retry": "False" },
-      { "kind": "ConversionCard", "event": "converted by Temple Prostitutes", "num": 2, "retry": "False" },
-      { "kind": "InsurrectionCard", "event": "overcrowding leads to Jail Break", "num": 1, "retry": "False" },
-      { "kind": "SeriouslyWeirdCard", "event": "bear the wrath of the Flying Spaghetti Monster", "num": 1, "retry": "False" }
+      { "kind": "ForceReductionCard", "event": "wounded in Friendly-Fire", "dice": "d10+1/20, >0", "num": 10, "retry": "False" },
+      { "kind": "ConversionCard", "event": "converted by Temple Prostitutes", "dice": "d10/10, >0", "num": 2, "retry": "False" },
+      { "kind": "InsurrectionCard", "event": "overcrowding leads to Jail Break", "dice": "d10/10, >0", "num": 1, "retry": "False" },
+      { "kind": "SeriouslyWeirdCard", "event": "bear the wrath of the Flying Spaghetti Monster", "dice": "d10/10, >1", "num": 1, "retry": "False" }
     ]
   },
 
@@ -29,12 +29,12 @@
     "captive_state": "Incarcerated",
 
     "conditions": [
-      { "kind": "SimulateJail", "dice": "d10/10" }
+      { "kind": "SimulateJail", "dice": "d10/10, >0" }
     ],
 
     "cards": [
-      { "kind": "ForceReductionCard", "event": "arrested for Domestic Terrorism", "num": 10, "retry": "False" },
-      { "kind": "SeriouslyWeirdCard", "event": "witness the Resurrection of Ronald Reagan", "num": 1, "retry": "False" }
+      { "kind": "ForceReductionCard", "event": "arrested for Domestic Terrorism", "dice": "d10+1/20, >0", "num": 10, "retry": "False" },
+      { "kind": "SeriouslyWeirdCard", "event": "witness the Resurrection of Ronald Reagan", "dice": "d10/10, >1", "num": 1, "retry": "False" }
     ]
   }
 }

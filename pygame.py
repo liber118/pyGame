@@ -20,14 +20,12 @@ import uuid
 debug = True # False
 
 
-def roll_dice10 ():
-    return random.randint(0, 9)
-
-
 def roll_dice (notation):
     base = None
+    roll, cond = notation.split(", ")
+
     p = re.compile("^d(\d+)(.*)$")
-    m = p.match(notation)
+    m = p.match(roll)
 
     if m:
         die_count = int(m.group(1))
@@ -36,7 +34,9 @@ def roll_dice (notation):
         for op in re.findall("[\-\+\*\/]\d+", m.group(2)):
             base = eval("%f %s %s" % (base, op[0], op[1:]))
 
-    return base
+    accepted = eval("%f %s" % (base, cond))
+
+    return base, accepted
 
 
 ######################################################################
@@ -101,12 +101,9 @@ class SimulateJail (Condition):
         n_reserve = us.calc_reserve()
 
         if n_reserve > us.meta["n_forces"]:
-            ## DICE: d10/10, >0
+            roll, accepted = roll_dice(self.notation)
 
-            roll = roll_dice(self.notation)
-            ROLL_AMNESTY = 0.0
-
-            if roll > ROLL_AMNESTY:
+            if accepted:
                 delta = round(roll * us.meta["n_captive"], 0)
                 us.log_event(delta, "captive_state", "JAIL AMNESTY!")
                 us.add_captive(game, -delta)
@@ -130,12 +127,9 @@ class SimulateHospital (Condition):
         them.meta["enraged"] = False
 
         if n_reserve > us.meta["n_forces"]:
-            ## DICE: d10, >6
+            roll, accepted = roll_dice(self.notation)
 
-            roll = roll_dice(self.notation)
-            ROLL_RAGE = 6
-
-            if roll > ROLL_RAGE:
+            if accepted:
                 us.log_event(0, "captive_state", "RIOT COP RAGE!")
                 them.meta["enraged"] = True
 
@@ -148,7 +142,8 @@ class Card (Condition):
     representation for a generic card in the deck
     """
 
-    def __init__ (self, event, retry=False):
+    def __init__ (self, event, notation, retry=False):
+        Condition.__init__(self, notation)
         self.event = event
         self.retry = retry
 
@@ -158,30 +153,30 @@ class ForceReductionCard (Card):
     representation for a 'force reduction' card in the deck
     """
 
-    def __init__ (self, event, retry=False):
-        Card.__init__(self, event, retry)
+    def __init__ (self, event, notation, retry=False):
+        Card.__init__(self, event, notation, retry)
 
 
     def execute (self, game, us, them):
-        ## DICE: d10+1/20
+        roll, accepted = roll_dice(self.notation)
 
-        roll = roll_dice("d10+1/20")
-        delta = round(roll * us.meta["n_deploy"], 0)
+        if accepted:
+            delta = round(roll * us.meta["n_deploy"], 0)
 
-        if us.meta["enraged"]:
-            REDUCE_FACTOR = 5.0
-            casualty = round(roll / REDUCE_FACTOR * delta, 0)
+            if us.meta["enraged"]:
+                REDUCE_FACTOR = 5.0
+                casualty = round(roll / REDUCE_FACTOR * delta, 0)
 
-            if debug:
-                print them.meta["side"], ":", "CASUALTY", casualty
+                if debug:
+                    print them.meta["side"], ":", "CASUALTY", casualty
 
-            delta -= casualty
-            them.log_event(casualty, "forces_name", "casualties")
-            them.meta["n_casualty"] += casualty
+                delta -= casualty
+                them.log_event(casualty, "forces_name", "casualties")
+                them.meta["n_casualty"] += casualty
 
-        them.log_event(delta, "forces_name", self.event)
-        us.add_captive(game, delta)
-        them.add_forces(game, -delta)
+            them.log_event(delta, "forces_name", self.event)
+            us.add_captive(game, delta)
+            them.add_forces(game, -delta)
 
 
 class InsurrectionCard (Card):
@@ -189,25 +184,25 @@ class InsurrectionCard (Card):
     representation for an 'insurrection' card in the deck
     """
 
-    def __init__ (self, event, retry=False):
-        Card.__init__(self, event, retry)
+    def __init__ (self, event, notation, retry=False):
+        Card.__init__(self, event, notation, retry)
 
 
     def execute (self, game, us, them):
-        ## DICE: d10/10
+        roll, accepted = roll_dice(self.notation)
 
-        roll = roll_dice("d10/10")
-        delta = round(roll * them.meta["n_captive"], 0)
+        if accepted:
+            delta = round(roll * them.meta["n_captive"], 0)
 
-        if debug:
-            print "exec insurrect", them.meta["n_captive"], "delta", delta
+            if debug:
+                print "exec insurrect", them.meta["n_captive"], "delta", delta
 
-        INSURRECT_FACTOR = 10.0
+            INSURRECT_FACTOR = 10.0
 
-        if delta > (them.meta["init_force"] / INSURRECT_FACTOR):
-            them.log_event(delta, "forces_name", self.event)
-            them.add_captive(game, -delta)
-            us.add_forces(game, delta)
+            if delta > (them.meta["init_force"] / INSURRECT_FACTOR):
+                them.log_event(delta, "forces_name", self.event)
+                them.add_captive(game, -delta)
+                us.add_forces(game, delta)
 
 
 class ConversionCard (Card):
@@ -215,17 +210,14 @@ class ConversionCard (Card):
     representation for a 'conversion' card in the deck
     """
 
-    def __init__ (self, event, retry=False):
-        Card.__init__(self, event, retry)
+    def __init__ (self, event, notation, retry=False):
+        Card.__init__(self, event, notation, retry)
 
 
     def execute (self, game, us, them):
-        ## DICE: d10/10, >0
+        roll, accepted = roll_dice(self.notation)
 
-        roll = roll_dice("d10/10")
-        ROLL_CONVERT = 0.0
-
-        if roll > ROLL_CONVERT:
+        if accepted:
             delta = round(roll * them.meta["n_forces"], 0)
 
             them.log_event(delta, "forces_name", self.event)
@@ -238,17 +230,14 @@ class SeriouslyWeirdCard (Card):
     representation for a 'seriously weird' card in the deck
     """
 
-    def __init__ (self, event, retry=False):
-        Card.__init__(self, event, retry)
+    def __init__ (self, event, notation, retry=False):
+        Card.__init__(self, event, notation, retry)
 
 
     def execute (self, game, us, them):
-        ## DICE: d10/10, >1
+        roll, accepted = roll_dice(self.notation)
 
-        roll = roll_dice("d10/10")
-        ROLL_WEIRD = 1.0
-
-        if roll > ROLL_WEIRD:
+        if accepted:
             delta = round(roll * them.meta["n_forces"], 0)
             them.log_event(delta, "forces_name", self.event)
             them.add_forces(game, -delta)
@@ -282,8 +271,9 @@ class Player:
         self.conditions = []
 
         for cond_conf in self.meta["conditions"]:
-            condition = eval("".join([cond_conf["kind"], '("', cond_conf["dice"], '")']))
-            self.conditions.append(condition)
+            cond_raw = "".join([cond_conf["kind"], '("', cond_conf["dice"], '")'])
+            cond = eval(cond_raw)
+            self.conditions.append(cond)
 
         del self.meta["conditions"]
 
@@ -292,7 +282,8 @@ class Player:
         self.deck = []
 
         for card_conf in self.meta["cards"]:
-            card = eval("".join([card_conf["kind"], '("', card_conf["event"], '",', card_conf["retry"], ')']))
+            card_raw = "".join([card_conf["kind"], '("', card_conf["event"], '", "', card_conf["dice"], '", ', card_conf["retry"], ')'])
+            card = eval(card_raw)
 
             for i in range(0, card_conf["num"]):
                 self.deck.append(card)
