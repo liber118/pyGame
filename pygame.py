@@ -9,6 +9,7 @@
 
 import json
 import random
+import re
 import sys
 import uuid
 
@@ -21,6 +22,21 @@ debug = True # False
 
 def roll_dice10 ():
     return random.randint(0, 9)
+
+
+def roll_dice (notation):
+    base = None
+    p = re.compile("^d(\d+)(.*)$")
+    m = p.match(notation)
+
+    if m:
+        die_count = int(m.group(1))
+        base = random.randint(0, die_count)
+
+        for op in re.findall("[\-\+\*\/]\d+", m.group(2)):
+            base = eval("%f %s %s" % (base, op[0], op[1:]))
+
+    return base
 
 
 ######################################################################
@@ -41,8 +57,8 @@ class Condition:
     representation for a condition to test in the simulation
     """
 
-    def __init__ (self):
-        pass
+    def __init__ (self, notation=None):
+        self.notation = notation
 
 
     def execute (self, game, us, them):
@@ -51,8 +67,8 @@ class Condition:
 
 
 class PreventDraw (Condition):
-    def __init__(self):
-        pass
+    def __init__(self, notation):
+        Condition.__init__(self, notation)
 
 
     def execute (self, game, us, them):
@@ -73,8 +89,8 @@ class PreventDraw (Condition):
 
 
 class SimulateJail (Condition):
-    def __init__(self):
-        pass
+    def __init__(self, notation):
+        Condition.__init__(self, notation)
 
 
     def execute (self, game, us, them):
@@ -87,8 +103,8 @@ class SimulateJail (Condition):
         if n_reserve > us.meta["n_forces"]:
             ## DICE: d10/10, >0
 
+            roll = roll_dice(self.notation)
             ROLL_AMNESTY = 0.0
-            roll = roll_dice10() / 10.0
 
             if roll > ROLL_AMNESTY:
                 delta = round(roll * us.meta["n_captive"], 0)
@@ -101,8 +117,8 @@ class SimulateJail (Condition):
 
 
 class SimulateHospital (Condition):
-    def __init__(self):
-        pass
+    def __init__(self, notation):
+        Condition.__init__(self, notation)
 
 
     def execute (self, game, us, them):
@@ -116,8 +132,8 @@ class SimulateHospital (Condition):
         if n_reserve > us.meta["n_forces"]:
             ## DICE: d10, >6
 
+            roll = roll_dice(self.notation)
             ROLL_RAGE = 6
-            roll = roll_dice10()
 
             if roll > ROLL_RAGE:
                 us.log_event(0, "captive_state", "RIOT COP RAGE!")
@@ -149,8 +165,7 @@ class ForceReductionCard (Card):
     def execute (self, game, us, them):
         ## DICE: d10+1/20
 
-        IMPACT_FACTOR = 20.0
-        roll = (roll_dice10() + 1.0) / IMPACT_FACTOR
+        roll = roll_dice("d10+1/20")
         delta = round(roll * us.meta["n_deploy"], 0)
 
         if us.meta["enraged"]:
@@ -181,7 +196,7 @@ class InsurrectionCard (Card):
     def execute (self, game, us, them):
         ## DICE: d10/10
 
-        roll = roll_dice10() / 10.0
+        roll = roll_dice("d10/10")
         delta = round(roll * them.meta["n_captive"], 0)
 
         if debug:
@@ -207,8 +222,8 @@ class ConversionCard (Card):
     def execute (self, game, us, them):
         ## DICE: d10/10, >0
 
+        roll = roll_dice("d10/10")
         ROLL_CONVERT = 0.0
-        roll = roll_dice10() / 10.0
 
         if roll > ROLL_CONVERT:
             delta = round(roll * them.meta["n_forces"], 0)
@@ -230,9 +245,8 @@ class SeriouslyWeirdCard (Card):
     def execute (self, game, us, them):
         ## DICE: d10/10, >1
 
+        roll = roll_dice("d10/10")
         ROLL_WEIRD = 1.0
-
-        roll = roll_dice10() / 10.0
 
         if roll > ROLL_WEIRD:
             delta = round(roll * them.meta["n_forces"], 0)
@@ -268,7 +282,7 @@ class Player:
         self.conditions = []
 
         for cond_conf in self.meta["conditions"]:
-            condition = eval("".join([cond_conf["kind"], '()']))
+            condition = eval("".join([cond_conf["kind"], '("', cond_conf["dice"], '")']))
             self.conditions.append(condition)
 
         del self.meta["conditions"]

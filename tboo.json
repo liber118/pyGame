@@ -10,8 +10,8 @@
     "captive_state": "Hospitalized",
 
     "conditions": [
-      { "kind": "SimulateHospital" },
-      { "kind": "PreventDraw" }
+      { "kind": "SimulateHospital", "dice": "d10" },
+      { "kind": "PreventDraw", "dice": "" }
     ],
 
     "cards": [
@@ -29,7 +29,7 @@
     "captive_state": "Incarcerated",
 
     "conditions": [
-      { "kind": "SimulateJail" }
+      { "kind": "SimulateJail", "dice": "d10/10" }
     ],
 
     "cards": [
