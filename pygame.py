@@ -145,14 +145,14 @@ class SimulateHospital (Condition):
         """
 
         n_reserve = us.calc_reserve()
-        them.meta["enraged"] = False
+        them.meta["rage"] = 0.0
 
         if n_reserve > us.meta["n_forces"]:
             roll, accepted = roll_dice(self.notation)
 
             if accepted:
                 us.log_event(0, "captive_state", "RIOT COP RAGE!")
-                them.meta["enraged"] = True
+                them.meta["rage"] += 0.2
 
         us.meta["n_reserve"] = min(n_reserve, us.meta["n_forces"])
         us.meta["n_deploy"] = us.meta["n_forces"] - us.meta["n_reserve"]
@@ -184,7 +184,7 @@ class ForceReductionCard (Card):
         if accepted:
             delta = round(roll * us.meta["n_deploy"], 0)
 
-            if us.meta["enraged"]:
+            if us.meta["rage"] > 0.5:
                 REDUCE_FACTOR = 5.0
                 casualty = round(roll / REDUCE_FACTOR * delta, 0)
 
@@ -299,9 +299,6 @@ class Player:
         self.meta["n_reserve"] = 0
         self.meta["n_casualty"] = 0
 
-        self.meta["enraged"] = False
-        self.meta["has_comm"] = True
-
         # populate conditions in the simulation
 
         self.conditions = []
@@ -329,6 +326,19 @@ class Player:
 
     def set_opponent (self, opponent):
         self.opponent = opponent
+
+
+    def count_force (self, game):
+        """
+        count this player's forces, distributed across the map
+        """
+
+        n_force = 0
+
+        for geo, hex in game.outcome["map"].items():
+            n_force += hex["force"][self.meta["index"]]
+
+        print self.meta["index"], n_force
 
 
     def has_play (self):
@@ -502,6 +512,9 @@ class Game:
         advance the game play for one turn
         """
 
+        self.founder.count_force(self)
+        self.fellows.count_force(self)
+
         self.founder.meta["log"].append([])
         self.fellows.meta["log"].append([])
 
@@ -544,7 +557,7 @@ class Game:
         winning condition terminates game
         """
 
-        self.sim.tally(self.founder == winner)
+        self.sim.tally(self.founder)
 
         loser = winner.opponent
         margin = winner.meta["n_forces"] - loser.meta["n_forces"]
@@ -572,18 +585,16 @@ class Simulation:
         for i in range(0, self.max_iterations):
             for outcome in Game(file_conf, sim):
                 if debug:
+                    #outcome["map"] = ""
                     print json.dumps(outcome)
 
 
-    def tally (self, player0_wins):
+    def tally (self, winner):
         """
         tally counts for winning players
         """
 
-        if player0_wins:
-            self.win_tally["0"] += 1
-        else:
-            self.win_tally["1"] += 1
+        self.win_tally[winner.meta["index"]] += 1
 
 
     def report (self):
