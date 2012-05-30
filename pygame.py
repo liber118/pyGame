@@ -19,8 +19,29 @@ import uuid
       
 debug = True # False
 
+def verify_move (pt0, pt1):
+    """
+    verify that a move from one hex to another is valid
+    """
+
+    (x0, y0) = map(lambda x: int(x), pt0.split(","))
+    (x1, y1) = map(lambda x: int(x), pt1.split(","))
+
+    if (abs(x0 - x1) == abs(y0 - y1)):
+        # valid diagonal move
+        return True
+    elif ((x0 == x1) and (abs(y0 - y2) == 2)):
+        # valid vertical move
+        return True
+    else:
+        return False
+
 
 def roll_dice (notation):
+    """
+    simulate a dice roll, based on the given notation
+    """
+
     base = None
     roll, cond = notation.split(", ")
 
@@ -241,6 +262,21 @@ class SeriouslyWeirdCard (Card):
             delta = round(roll * them.meta["n_forces"], 0)
             them.log_event(delta, "forces_name", self.event)
             them.add_forces(game, -delta)
+
+
+class WinningPlayCard (Card):
+    """
+    representation for a 'winning play' card in the deck
+    """
+
+    def __init__ (self, event, notation, retry=False):
+        Card.__init__(self, event, notation, retry)
+
+    def execute (self, game, us, them):
+        roll, accepted = roll_dice(self.notation)
+
+        if accepted:
+            print "WINNING PLAY"
 
 
 class Player:

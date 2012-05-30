@@ -2,6 +2,12 @@
   "episode": "The Battle Of Oakland",
   "max_turns": 100,
   "len_stalemate": 3,
+  "mayor_loc": "5,3",
+
+  "map": {
+    "5,3": "City Hall",
+    "9,5": "Clorox Building"
+  },
 
   "player0": {
     "side": "Founders",
@@ -18,7 +24,8 @@
       { "kind": "ForceReductionCard", "event": "wounded in Friendly-Fire", "dice": "d10+1/20, >0", "num": 10, "retry": "False" },
       { "kind": "ConversionCard", "event": "converted by Temple Prostitutes", "dice": "d10/10, >0", "num": 2, "retry": "False" },
       { "kind": "InsurrectionCard", "event": "overcrowding leads to Jail Break", "dice": "d10/10, >0", "num": 1, "retry": "False" },
-      { "kind": "SeriouslyWeirdCard", "event": "bear the wrath of the Flying Spaghetti Monster", "dice": "d10/10, >1", "num": 1, "retry": "False" }
+      { "kind": "SeriouslyWeirdCard", "event": "bear the wrath of the Flying Spaghetti Monster", "dice": "d10/10, >1", "num": 1, "retry": "False" },
+      { "kind": "WinningPlayCard", "event": "captured Mayor Kwon", "dice": "d10, >2", "num": 1, "retry": "True" }
     ]
   },
 
@@ -34,7 +41,8 @@
 
     "cards": [
       { "kind": "ForceReductionCard", "event": "arrested for Domestic Terrorism", "dice": "d10+1/20, >0", "num": 10, "retry": "False" },
-      { "kind": "SeriouslyWeirdCard", "event": "witness the Resurrection of Ronald Reagan", "dice": "d10/10, >1", "num": 1, "retry": "False" }
+      { "kind": "SeriouslyWeirdCard", "event": "witness the Resurrection of Ronald Reagan", "dice": "d10/10, >1", "num": 1, "retry": "False" },
+      { "kind": "WinningPlayCard", "event": "rescued Mayor Kwon", "dice": "d10, >2", "num": 1, "retry": "True" }
     ]
   }
 }
