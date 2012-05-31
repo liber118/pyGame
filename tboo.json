@@ -4,7 +4,7 @@
   "len_stalemate": 3,
 
   "map": {
-    "0,2": { "site": "Parking Lot A", "force": { "0": 0, "1": 0 }, "has": [] },
+    "0,2": { "site": "Parking Lot A", "force": { "0": 0, "1": 0 }, "has": [ "EMP" ] },
     "0,4": { "site": "17th St", "force": { "0": 0, "1": 0 }, "has": [] },
     "0,6": { "site": "Telegraph Ave", "force": { "0": 0, "1": 0 }, "has": [] },
     "1,1": { "site": "Social Services", "force": { "0": 0, "1": 0 }, "has": [ "aerostat" ] },
@@ -48,10 +48,11 @@
     "side": "Founders",
     "index": "0",
 
-    "init_force": 100,
     "forces_name": "Occupy",
     "captive_state": "Hospitalized",
-    "communications": 0.9,
+    "comm": 0.9,
+    "poll": 0.9,
+    "food": 0.9,
     "rage": 0.0,
 
     "conditions": [
@@ -64,7 +65,7 @@
       { "kind": "ConversionCard", "event": "converted by Temple Prostitutes", "dice": "d10/10, >0", "num": 2, "retry": "False" },
       { "kind": "InsurrectionCard", "event": "overcrowding leads to Jail Break", "dice": "d10/10, >0", "num": 1, "retry": "False" },
       { "kind": "SeriouslyWeirdCard", "event": "bear the wrath of the Flying Spaghetti Monster", "dice": "d10/10, >1", "num": 1, "retry": "False" },
-      { "kind": "WinningPlayCard", "event": "captured Mayor Kwon", "dice": "d10, >2", "num": 1, "retry": "True" }
+      { "kind": "WinningPlayCard", "event": "captured Mayor Kwon", "dice": "d10, >2", "num": 1, "retry": "False" }
     ]
   },
 
@@ -72,10 +73,11 @@
     "side": "The Fellowship",
     "index": "1",
 
-    "init_force": 100,
     "forces_name": "Police",
     "captive_state": "Incarcerated",
-    "communications": 0.9,
+    "comm": 0.9,
+    "poll": 0.9,
+    "food": 0.9,
     "rage": 0.0,
 
     "conditions": [
@@ -85,7 +87,7 @@
     "cards": [
       { "kind": "ForceReductionCard", "event": "arrested for Domestic Terrorism", "dice": "d10+1/20, >0", "num": 10, "retry": "False" },
       { "kind": "SeriouslyWeirdCard", "event": "witness the Resurrection of Ronald Reagan", "dice": "d10/10, >1", "num": 1, "retry": "False" },
-      { "kind": "WinningPlayCard", "event": "rescued Mayor Kwon", "dice": "d10, >2", "num": 1, "retry": "True" }
+      { "kind": "WinningPlayCard", "event": "rescued Mayor Kwon", "dice": "d10, >2", "num": 1, "retry": "False" }
     ]
   }
 }

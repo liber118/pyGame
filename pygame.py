@@ -98,9 +98,22 @@ class PreventDraw (Condition):
         otherwise the Status Quo prevails
         """
 
-        full_meta = str(us.meta) + str(them.meta)
+        meta_0 = json.dumps(us.meta)
+        meta_1 = json.dumps(them.meta)
+
+        unmeta_0 = json.loads(meta_0)
+        len_log_0 = len(filter(lambda x: len(x) < 1, unmeta_0["log"]))
+        del unmeta_0["log"]
+
+        unmeta_1 = json.loads(meta_1)
+        len_log_1 = len(filter(lambda x: len(x) < 1, unmeta_1["log"]))
+        del unmeta_1["log"]
+
+        full_meta = str(unmeta_0) + str(unmeta_1)
 
         if len(filter(lambda x: full_meta != x, game.last_full_meta)) == 0:
+            game.game_over(them, "stalemate")
+        elif (len_log_0 > game.outcome["len_stalemate"]) or (len_log_1 > game.outcome["len_stalemate"]):
             game.game_over(them, "stalemate")
         else:
             game.last_full_meta.append(full_meta)
@@ -284,7 +297,7 @@ class Player:
     representation for a player in the game
     """
 
-    def __init__ (self, meta):
+    def __init__ (self, meta, game):
         """
         initialize
         """
@@ -293,8 +306,10 @@ class Player:
         self.opponent = None
         self.meta["log"] = []
 
+        self.meta["init_force"] = self.count_force(game)
         self.meta["n_forces"] = self.meta["init_force"]
         self.meta["n_deploy"] = self.meta["init_force"]
+
         self.meta["n_captive"] = 0
         self.meta["n_reserve"] = 0
         self.meta["n_casualty"] = 0
@@ -333,12 +348,12 @@ class Player:
         count this player's forces, distributed across the map
         """
 
-        n_force = 0
+        n_forces = 0
 
         for geo, hex in game.outcome["map"].items():
-            n_force += hex["force"][self.meta["index"]]
+            n_forces += hex["force"][self.meta["index"]]
 
-        print self.meta["index"], n_force
+        return n_forces
 
 
     def has_play (self):
@@ -412,7 +427,12 @@ class Player:
         record a loss in terms of impact on a given population, due to a specified event
         """
 
-        self.meta["log"][-1].append([int(delta), self.meta[population], event])
+        log_entry = [int(delta), self.meta[population], event]
+        
+        if debug:
+            print log_entry
+
+        self.meta["log"][-1].append(log_entry)
 
 
 class GameIterator:
@@ -428,13 +448,14 @@ class GameIterator:
         initialize a game iterator, based on the UUID
         """
 
+        self.game = game
         self.uuid = game.outcome["uuid"]
         self.game_dict[self.uuid] = game
 
 
     def next (self):
         """
-        iterate to run game until end
+        iterate to run game until its end
         """
 
         if not self.uuid in self.game_dict:
@@ -445,7 +466,7 @@ class GameIterator:
             if outcome["game_over"]:
                 del self.game_dict[self.uuid]
 
-            return outcome
+            return self.game, outcome
 
 
 class Game:
@@ -467,8 +488,8 @@ class Game:
         self.outcome["uuid"] = str(uuid.uuid1())
         self.iterator = GameIterator(self)
 
-        self.founder = Player(self.outcome["player0"])
-        self.fellows = Player(self.outcome["player1"])
+        self.founder = Player(self.outcome["player0"], self)
+        self.fellows = Player(self.outcome["player1"], self)
 
         self.founder.set_opponent(self.fellows)
         self.fellows.set_opponent(self.founder)
@@ -501,8 +522,8 @@ class Game:
             self.outcome["end"] = ex.value
             self.outcome["game_over"] = True
 
-        self.outcome[self.founder.meta["side"]] = self.founder.meta
-        self.outcome[self.fellows.meta["side"]] = self.fellows.meta
+        self.outcome[self.founder.meta["index"]] = self.founder.meta
+        self.outcome[self.fellows.meta["index"]] = self.fellows.meta
 
         return self.outcome
 
@@ -566,12 +587,28 @@ class Game:
         raise GameOverException(stats)
 
 
+    def report (self, outcome):
+        """
+        print a text report of the game outcome
+        """
+
+        print "n_turn", outcome["n_turn"]
+        print json.dumps(outcome["0"])
+        print json.dumps(outcome["1"])
+
+        if "end" in outcome:
+            print json.dumps(outcome['end'])
+
+        #print outcome.keys()
+        #print json.dumps(outcome)
+
+
 class Simulation:
     """
     representation for the game simulation
     """
 
-    def __init__ (self, file_conf, max_iterations=20):
+    def __init__ (self, file_conf, max_iterations):
         self.file_conf = file_conf
         self.max_iterations = max_iterations
         self.win_tally = { "0": 0, "1": 0 }
@@ -583,10 +620,9 @@ class Simulation:
         """
         
         for i in range(0, self.max_iterations):
-            for outcome in Game(file_conf, sim):
+            for game, outcome in Game(file_conf, sim):
                 if debug:
-                    #outcome["map"] = ""
-                    print json.dumps(outcome)
+                    game.report(outcome)
 
 
     def tally (self, winner):
@@ -610,7 +646,9 @@ class Simulation:
 
 if __name__ == "__main__":
     file_conf = sys.argv[1]
-    sim = Simulation(file_conf)
+    max_iterations = int(sys.argv[2])
+
+    sim = Simulation(file_conf, max_iterations)
 
     sim.simulate()
     sim.report()
