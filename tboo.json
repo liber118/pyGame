@@ -51,7 +51,7 @@
     "forces_name": "Occupy",
     "captive_state": "Hospitalized",
     "comm": 0.9,
-    "poll": 0.9,
+    "poll": 0.5,
     "food": 0.9,
     "rage": 0.0,
 
@@ -76,7 +76,7 @@
     "forces_name": "Police",
     "captive_state": "Incarcerated",
     "comm": 0.9,
-    "poll": 0.9,
+    "poll": 0.5,
     "food": 0.9,
     "rage": 0.0,
 

@@ -144,7 +144,7 @@ class SimulateJail (Condition):
                 them.add_forces(game, delta)
 
         us.meta["n_reserve"] = min(n_reserve, us.meta["n_forces"])
-        us.meta["n_deploy"] = us.meta["n_forces"] - us.meta["n_reserve"]
+        us.meta["n_deployed"] = us.meta["n_forces"] - us.meta["n_reserve"]
 
 
 class SimulateHospital (Condition):
@@ -168,7 +168,7 @@ class SimulateHospital (Condition):
                 them.meta["rage"] += 0.2
 
         us.meta["n_reserve"] = min(n_reserve, us.meta["n_forces"])
-        us.meta["n_deploy"] = us.meta["n_forces"] - us.meta["n_reserve"]
+        us.meta["n_deployed"] = us.meta["n_forces"] - us.meta["n_reserve"]
 
 
 class Card (Condition):
@@ -195,7 +195,7 @@ class ForceReductionCard (Card):
         roll, accepted = roll_dice(self.notation)
 
         if accepted:
-            delta = round(roll * us.meta["n_deploy"], 0)
+            delta = round(roll * us.meta["n_deployed"], 0)
 
             if us.meta["rage"] > 0.5:
                 REDUCE_FACTOR = 5.0
@@ -308,7 +308,7 @@ class Player:
 
         self.meta["init_force"] = self.count_force(game)
         self.meta["n_forces"] = self.meta["init_force"]
-        self.meta["n_deploy"] = self.meta["init_force"]
+        self.meta["n_deployed"] = self.meta["init_force"]
 
         self.meta["n_captive"] = 0
         self.meta["n_reserve"] = 0
@@ -484,9 +484,7 @@ class Game:
 
         self.outcome["n_turn"] = 1
         self.outcome["game_over"] = False
-
         self.outcome["uuid"] = str(uuid.uuid1())
-        self.iterator = GameIterator(self)
 
         self.founder = Player(self.outcome["player0"], self)
         self.fellows = Player(self.outcome["player1"], self)
@@ -502,7 +500,7 @@ class Game:
 
 
     def __iter__(self):
-        return self.iterator
+        return GameIterator(self)
 
 
     def play_duplex (self):
